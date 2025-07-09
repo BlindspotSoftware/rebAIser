@@ -1,0 +1,49 @@
+# Integration Test Configuration
+# This configuration is used for real-world integration testing
+
+interval: 1m
+dry_run: false
+
+git:
+  # These will be overridden by test setup
+  internal_repo: "/tmp/test-internal"
+  upstream_repo: "/tmp/test-upstream"
+  working_dir: "/tmp/test-work"
+  branch: "main"
+
+ai:
+  # Set via OPENAI_API_KEY environment variable
+  openai_api_key: ""
+  model: "gpt-3.5-turbo"  # Use cheaper model for testing
+  max_tokens: 1000
+
+github:
+  # Mock values for testing
+  token: "test-token"
+  owner: "test-org"
+  repo: "test-repo"
+  auto_merge_delay: 1h
+  reviewers_team: "test-team"
+
+slack:
+  # Mock values for testing
+  webhook_url: "https://hooks.slack.com/test"
+  channel: "#test"
+  username: "Test Bot"
+
+tests:
+  timeout: 5m
+  commands:
+    - name: "go-build"
+      command: "go"
+      args: ["build", "."]
+      working_dir: ""
+      environment:
+        CGO_ENABLED: "0"
+    
+    - name: "go-test"
+      command: "go"
+      args: ["test", "."]
+      working_dir: ""
+      environment:
+        CGO_ENABLED: "0"

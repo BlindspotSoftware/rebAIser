@@ -27,6 +27,8 @@ type PullRequest struct {
 	Head      string
 	Base      string
 	HTMLURL   string
+	Mergeable bool
+	Draft     bool
 	CreatedAt string
 	UpdatedAt string
 }

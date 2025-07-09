@@ -16,6 +16,10 @@ type Config struct {
 	GitHub GitHubConfig `yaml:"github"`
 	Slack  SlackConfig  `yaml:"slack"`
 	Tests  TestsConfig  `yaml:"tests"`
+	
+	// Runtime fields (not in YAML)
+	ActualWorkingDir string `yaml:"-"`
+	KeepArtifacts    bool   `yaml:"-"`
 }
 
 type GitConfig struct {
@@ -70,6 +74,17 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
+	// Apply environment variable overrides
+	if apiKey := os.Getenv("OPENAI_API_KEY"); apiKey != "" {
+		config.AI.OpenAIAPIKey = apiKey
+	}
+	if webhookURL := os.Getenv("SLACK_WEBHOOK_URL"); webhookURL != "" {
+		config.Slack.WebhookURL = webhookURL
+	}
+	if githubToken := os.Getenv("GITHUB_TOKEN"); githubToken != "" {
+		config.GitHub.Token = githubToken
+	}
+
 	// Set defaults
 	if config.Interval == 0 {
 		config.Interval = 8 * time.Hour // Default to 3 times per day
@@ -85,6 +100,12 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if config.Tests.Timeout == 0 {
 		config.Tests.Timeout = 30 * time.Minute
+	}
+	if config.Slack.Username == "" {
+		config.Slack.Username = "AI Rebaser"
+	}
+	if config.Slack.Channel == "" {
+		config.Slack.Channel = "#dev"
 	}
 
 	return &config, nil

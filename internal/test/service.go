@@ -8,38 +8,33 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/9elements/rebaiser/internal/interfaces"
+	"github.com/BlindspotSoftware/rebAIser/internal/interfaces"
 )
 
 type Service struct {
-	log *logrus.Entry
+	log      *logrus.Entry
+	commands []interfaces.TestCommand
 }
 
-func NewService() interfaces.TestService {
+func NewService(commands []interfaces.TestCommand) interfaces.TestService {
 	return &Service{
-		log: logrus.WithField("component", "test"),
+		log:      logrus.WithField("component", "test"),
+		commands: commands,
 	}
 }
 
 func (s *Service) RunTests(ctx context.Context, workingDir string) (*interfaces.TestResult, error) {
 	s.log.WithField("workingDir", workingDir).Info("Running tests")
 
-	// TODO: Load test commands from config
-	testCommands := []interfaces.TestCommand{
-		{
-			Name:       "build",
-			Command:    "go",
-			Args:       []string{"build", "./..."},
-			WorkingDir: workingDir,
-			Timeout:    5 * time.Minute,
-		},
-		{
-			Name:       "test",
-			Command:    "go",
-			Args:       []string{"test", "./..."},
-			WorkingDir: workingDir,
-			Timeout:    10 * time.Minute,
-		},
+	// If no test commands configured, skip testing
+	if len(s.commands) == 0 {
+		s.log.Info("No test commands configured, skipping tests")
+		return &interfaces.TestResult{
+			Success:     true,
+			Duration:    0,
+			Results:     []interfaces.CommandResult{},
+			FailedTests: []string{},
+		}, nil
 	}
 
 	var results []interfaces.CommandResult
@@ -47,7 +42,7 @@ func (s *Service) RunTests(ctx context.Context, workingDir string) (*interfaces.
 	allSuccess := true
 	startTime := time.Now()
 
-	for _, testCmd := range testCommands {
+	for _, testCmd := range s.commands {
 		result, err := s.RunCommand(ctx, testCmd)
 		if err != nil {
 			s.log.WithError(err).WithField("command", testCmd.Name).Error("Failed to run test command")

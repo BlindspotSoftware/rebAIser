@@ -7,13 +7,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/sirupsen/logrus"
 
-	"github.com/9elements/rebaiser/internal/interfaces"
+	"github.com/BlindspotSoftware/rebAIser/internal/interfaces"
 )
 
 type Service struct {
@@ -32,12 +28,9 @@ func (s *Service) Clone(ctx context.Context, repo, dir string) error {
 		"dir":  dir,
 	}).Info("Cloning repository")
 
-	_, err := git.PlainClone(dir, false, &git.CloneOptions{
-		URL:      repo,
-		Progress: os.Stdout,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to clone repository: %w", err)
+	cmd := exec.CommandContext(ctx, "git", "clone", repo, dir)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to clone repository: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
@@ -46,16 +39,9 @@ func (s *Service) Clone(ctx context.Context, repo, dir string) error {
 func (s *Service) Fetch(ctx context.Context, dir string) error {
 	s.log.WithField("dir", dir).Info("Fetching updates")
 
-	repo, err := git.PlainOpen(dir)
-	if err != nil {
-		return fmt.Errorf("failed to open repository: %w", err)
-	}
-
-	err = repo.Fetch(&git.FetchOptions{
-		RefSpecs: []config.RefSpec{"refs/*:refs/*"},
-	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
-		return fmt.Errorf("failed to fetch: %w", err)
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "fetch", "--all")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to fetch: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
@@ -67,14 +53,13 @@ func (s *Service) Rebase(ctx context.Context, dir, branch string) error {
 		"branch": branch,
 	}).Info("Starting rebase")
 
-	// Use git command for rebase since go-git doesn't support it natively
 	cmd := exec.CommandContext(ctx, "git", "-C", dir, "rebase", branch)
-	if err := cmd.Run(); err != nil {
+	if output, err := cmd.CombinedOutput(); err != nil {
 		// Check if it's a conflict (expected) or actual error
-		if strings.Contains(err.Error(), "exit status 1") {
-			return fmt.Errorf("rebase conflicts detected: %w", err)
+		if strings.Contains(string(output), "CONFLICT") || strings.Contains(err.Error(), "exit status 1") {
+			return fmt.Errorf("rebase conflicts detected: %w\nOutput: %s", err, string(output))
 		}
-		return fmt.Errorf("failed to rebase: %w", err)
+		return fmt.Errorf("failed to rebase: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
@@ -83,7 +68,6 @@ func (s *Service) Rebase(ctx context.Context, dir, branch string) error {
 func (s *Service) GetConflicts(ctx context.Context, dir string) ([]interfaces.GitConflict, error) {
 	s.log.WithField("dir", dir).Info("Getting conflicts")
 
-	// Use git command to get conflict files
 	cmd := exec.CommandContext(ctx, "git", "-C", dir, "diff", "--name-only", "--diff-filter=U")
 	output, err := cmd.Output()
 	if err != nil {
@@ -160,10 +144,9 @@ func (s *Service) ResolveConflict(ctx context.Context, dir, file, resolution str
 		return fmt.Errorf("failed to resolve conflict: %w", err)
 	}
 
-	// Use git command to add resolved file
 	cmd := exec.CommandContext(ctx, "git", "-C", dir, "add", file)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to add resolved file: %w", err)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to add resolved file: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
@@ -172,24 +155,35 @@ func (s *Service) ResolveConflict(ctx context.Context, dir, file, resolution str
 func (s *Service) Commit(ctx context.Context, dir, message string) error {
 	s.log.WithField("message", message).Info("Committing changes")
 
-	repo, err := git.PlainOpen(dir)
-	if err != nil {
-		return fmt.Errorf("failed to open repository: %w", err)
+	// Configure git user if not already set
+	if err := s.configureGitUser(ctx, dir); err != nil {
+		return fmt.Errorf("failed to configure git user: %w", err)
 	}
 
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return fmt.Errorf("failed to get worktree: %w", err)
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "commit", "-m", message)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to commit: %w\nOutput: %s", err, string(output))
 	}
 
-	_, err = worktree.Commit(message, &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  "AI Rebaser",
-			Email: "ai-rebaser@example.com",
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to commit: %w", err)
+	return nil
+}
+
+func (s *Service) configureGitUser(ctx context.Context, dir string) error {
+	// Check if user.name is already configured
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "config", "user.name")
+	if output, err := cmd.Output(); err == nil && strings.TrimSpace(string(output)) != "" {
+		return nil // Already configured
+	}
+
+	// Set user.name and user.email
+	cmd = exec.CommandContext(ctx, "git", "-C", dir, "config", "user.name", "AI Rebaser")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to set user.name: %w\nOutput: %s", err, string(output))
+	}
+
+	cmd = exec.CommandContext(ctx, "git", "-C", dir, "config", "user.email", "ai-rebaser@example.com")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to set user.email: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
@@ -198,17 +192,9 @@ func (s *Service) Commit(ctx context.Context, dir, message string) error {
 func (s *Service) Push(ctx context.Context, dir, branch string) error {
 	s.log.WithField("branch", branch).Info("Pushing changes")
 
-	repo, err := git.PlainOpen(dir)
-	if err != nil {
-		return fmt.Errorf("failed to open repository: %w", err)
-	}
-
-	err = repo.Push(&git.PushOptions{
-		RemoteName: "origin",
-		RefSpecs:   []config.RefSpec{config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", branch, branch))},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to push: %w", err)
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "push", "origin", branch)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to push: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
@@ -217,55 +203,83 @@ func (s *Service) Push(ctx context.Context, dir, branch string) error {
 func (s *Service) CreateBranch(ctx context.Context, dir, branch string) error {
 	s.log.WithField("branch", branch).Info("Creating branch")
 
-	repo, err := git.PlainOpen(dir)
-	if err != nil {
-		return fmt.Errorf("failed to open repository: %w", err)
-	}
-
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return fmt.Errorf("failed to get worktree: %w", err)
-	}
-
-	err = worktree.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
-		Create: true,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create branch: %w", err)
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "checkout", "-b", branch)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to create branch: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
 }
 
 func (s *Service) GetStatus(ctx context.Context, dir string) (interfaces.GitStatus, error) {
-	repo, err := git.PlainOpen(dir)
-	if err != nil {
-		return interfaces.GitStatus{}, fmt.Errorf("failed to open repository: %w", err)
-	}
+	s.log.WithField("dir", dir).Info("Getting git status")
 
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return interfaces.GitStatus{}, fmt.Errorf("failed to get worktree: %w", err)
-	}
-
-	status, err := worktree.Status()
+	// Get porcelain status
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "status", "--porcelain")
+	output, err := cmd.Output()
 	if err != nil {
 		return interfaces.GitStatus{}, fmt.Errorf("failed to get status: %w", err)
 	}
 
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	gitStatus := interfaces.GitStatus{
-		IsClean: status.IsClean(),
+		IsClean: len(lines) == 1 && lines[0] == "", // Empty output means clean
 	}
 
-	for file, fileStatus := range status {
-		if fileStatus.Staging == git.Unmerged || fileStatus.Worktree == git.Unmerged {
-			gitStatus.HasConflicts = true
-			gitStatus.ConflictFiles = append(gitStatus.ConflictFiles, file)
-		} else {
-			gitStatus.ModifiedFiles = append(gitStatus.ModifiedFiles, file)
+	// Check for conflicts specifically
+	cmd = exec.CommandContext(ctx, "git", "-C", dir, "diff", "--name-only", "--diff-filter=U")
+	conflictOutput, err := cmd.Output()
+	if err != nil {
+		return interfaces.GitStatus{}, fmt.Errorf("failed to get conflict status: %w", err)
+	}
+
+	conflictFiles := strings.Split(strings.TrimSpace(string(conflictOutput)), "\n")
+	if len(conflictFiles) > 0 && conflictFiles[0] != "" {
+		gitStatus.HasConflicts = true
+		gitStatus.ConflictFiles = conflictFiles
+	}
+
+	// Parse modified files from porcelain output
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		if len(line) >= 3 {
+			file := line[3:]
+			// Check if it's a conflict file
+			isConflict := false
+			for _, conflictFile := range conflictFiles {
+				if file == conflictFile {
+					isConflict = true
+					break
+				}
+			}
+			if !isConflict {
+				gitStatus.ModifiedFiles = append(gitStatus.ModifiedFiles, file)
+			}
 		}
 	}
 
 	return gitStatus, nil
+}
+
+// AddRemote adds a remote to the repository
+func (s *Service) AddRemote(ctx context.Context, dir, name, url string) error {
+	s.log.WithFields(logrus.Fields{
+		"dir":  dir,
+		"name": name,
+		"url":  url,
+	}).Info("Adding remote")
+
+	cmd := exec.CommandContext(ctx, "git", "-C", dir, "remote", "add", name, url)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		// Check if remote already exists
+		if strings.Contains(string(output), "already exists") {
+			s.log.WithField("name", name).Info("Remote already exists, skipping")
+			return nil
+		}
+		return fmt.Errorf("failed to add remote: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
 }

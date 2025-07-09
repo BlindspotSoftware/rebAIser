@@ -12,6 +12,7 @@ type GitService interface {
 	Push(ctx context.Context, dir, branch string) error
 	CreateBranch(ctx context.Context, dir, branch string) error
 	GetStatus(ctx context.Context, dir string) (GitStatus, error)
+	AddRemote(ctx context.Context, dir, name, url string) error
 }
 
 type GitConflict struct {

@@ -1,0 +1,42 @@
+# Test configuration for AI Rebaser
+interval: 1h
+dry_run: true
+
+git:
+  internal_repo: "https://github.com/test-org/internal-repo.git"
+  upstream_repo: "https://github.com/upstream/open-source-repo.git"
+  working_dir: "/tmp/ai-rebaser-test"
+  branch: "main"
+
+ai:
+  openai_api_key: "test-key"
+  model: "gpt-4"
+  max_tokens: 1000
+
+github:
+  token: "test-token"
+  owner: "test-org"
+  repo: "internal-repo"
+  auto_merge_delay: 1h
+  reviewers_team: "test-team"
+
+slack:
+  webhook_url: "https://hooks.slack.com/test"
+  channel: "#test"
+  username: "Test Bot"
+
+tests:
+  timeout: 5m
+  commands:
+    - name: "build"
+      command: "go"
+      args: ["build", "./..."]
+      working_dir: ""
+      environment:
+        CGO_ENABLED: "0"
+    - name: "test"
+      command: "go"
+      args: ["test", "./..."]
+      working_dir: ""
+      environment:
+        CGO_ENABLED: "0"
