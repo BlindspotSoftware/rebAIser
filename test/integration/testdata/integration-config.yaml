@@ -14,6 +14,8 @@ git:
 ai:
   # Set via OPENAI_API_KEY environment variable
   openai_api_key: ""
+  openrouter_api_key: ""
+  base_url: ""
   model: "gpt-3.5-turbo"  # Use cheaper model for testing
   max_tokens: 1000
 

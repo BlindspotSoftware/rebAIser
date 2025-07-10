@@ -149,9 +149,28 @@ func initializeServices(cfg *config.Config) (*Services, error) {
 		}
 	}
 
+	// Auto-detect provider and get the appropriate API key
+	var provider, apiKey string
+	usingOpenRouter := cfg.AI.OpenRouterAPIKey != ""
+	usingOpenAI := cfg.AI.OpenAIAPIKey != ""
+	
+	if usingOpenRouter && usingOpenAI {
+		log.Warn("Both OpenAI and OpenRouter API keys are set. Using OpenRouter by default.")
+		provider = "openrouter"
+		apiKey = cfg.AI.OpenRouterAPIKey
+	} else if usingOpenRouter {
+		provider = "openrouter"
+		apiKey = cfg.AI.OpenRouterAPIKey
+	} else if usingOpenAI {
+		provider = "openai"
+		apiKey = cfg.AI.OpenAIAPIKey
+	} else {
+		return nil, fmt.Errorf("no AI API key provided. Set either OPENAI_API_KEY or OPENROUTER_API_KEY environment variable")
+	}
+
 	services := &Services{
 		Git:    git.NewService(),
-		AI:     ai.NewService(cfg.AI.OpenAIAPIKey, cfg.AI.Model, cfg.AI.MaxTokens),
+		AI:     ai.NewService(provider, apiKey, cfg.AI.BaseURL, cfg.AI.Model, cfg.AI.MaxTokens),
 		GitHub: github.NewService(cfg.GitHub.Token, cfg.GitHub.Owner, cfg.GitHub.Repo),
 		Notify: notify.NewService(cfg.Slack.WebhookURL, cfg.Slack.Channel, cfg.Slack.Username),
 		Test:   test.NewService(testCommands),

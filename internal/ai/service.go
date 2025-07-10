@@ -13,17 +13,29 @@ import (
 
 type Service struct {
 	client    *openai.Client
+	provider  string
 	model     string
 	maxTokens int
 	log       *logrus.Entry
 }
 
-func NewService(apiKey, model string, maxTokens int) interfaces.AIService {
+func NewService(provider, apiKey, baseURL, model string, maxTokens int) interfaces.AIService {
+	var client *openai.Client
+	
+	if provider == "openrouter" && baseURL != "" {
+		config := openai.DefaultConfig(apiKey)
+		config.BaseURL = baseURL
+		client = openai.NewClientWithConfig(config)
+	} else {
+		client = openai.NewClient(apiKey)
+	}
+	
 	return &Service{
-		client:    openai.NewClient(apiKey),
+		client:    client,
+		provider:  provider,
 		model:     model,
 		maxTokens: maxTokens,
-		log:       logrus.WithField("component", "ai"),
+		log:       logrus.WithField("component", "ai").WithField("provider", provider),
 	}
 }
 
@@ -50,11 +62,11 @@ func (s *Service) ResolveConflict(ctx context.Context, conflict interfaces.GitCo
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("OpenAI API call failed: %w", err)
+		return "", fmt.Errorf("%s API call failed: %w", s.provider, err)
 	}
 
 	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("no response from OpenAI API")
+		return "", fmt.Errorf("no response from %s API", s.provider)
 	}
 
 	resolution := strings.TrimSpace(resp.Choices[0].Message.Content)
@@ -88,11 +100,11 @@ func (s *Service) GenerateCommitMessage(ctx context.Context, changes []string) (
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("OpenAI API call failed: %w", err)
+		return "", fmt.Errorf("%s API call failed: %w", s.provider, err)
 	}
 
 	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("no response from OpenAI API")
+		return "", fmt.Errorf("no response from %s API", s.provider)
 	}
 
 	commitMessage := strings.TrimSpace(resp.Choices[0].Message.Content)
@@ -127,11 +139,11 @@ func (s *Service) GenerateCommitMessageWithConflicts(ctx context.Context, change
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("OpenAI API call failed: %w", err)
+		return "", fmt.Errorf("%s API call failed: %w", s.provider, err)
 	}
 
 	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("no response from OpenAI API")
+		return "", fmt.Errorf("no response from %s API", s.provider)
 	}
 
 	commitMessage := strings.TrimSpace(resp.Choices[0].Message.Content)
@@ -166,11 +178,11 @@ func (s *Service) GeneratePRDescription(ctx context.Context, commits []string, c
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("OpenAI API call failed: %w", err)
+		return "", fmt.Errorf("%s API call failed: %w", s.provider, err)
 	}
 
 	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("no response from OpenAI API")
+		return "", fmt.Errorf("no response from %s API", s.provider)
 	}
 
 	description := strings.TrimSpace(resp.Choices[0].Message.Content)

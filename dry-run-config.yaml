@@ -19,12 +19,19 @@ git:
   # Branch to rebase (your main development branch)
   branch: "main"
 
-# OpenAI configuration
+# AI configuration
 ai:
   # OpenAI API key - PREFER using OPENAI_API_KEY environment variable
   openai_api_key: ""  # Leave empty to use environment variable
-  # Model to use for conflict resolution (gpt-4 recommended for complex conflicts)
-  model: "gpt-4"
+  # OpenRouter API key - PREFER using OPENROUTER_API_KEY environment variable
+  # Provider is auto-detected: if openrouter_api_key is set, OpenRouter is used
+  openrouter_api_key: ""  # Leave empty to use environment variable
+  # Base URL for OpenRouter or custom endpoints (auto-configured for OpenRouter)
+  base_url: ""
+  # Model to use for conflict resolution
+  # OpenAI models: gpt-4, gpt-4-turbo, gpt-3.5-turbo
+  # OpenRouter models: anthropic/claude-3.5-sonnet, meta-llama/llama-3.1-8b-instruct, etc.
+  model: "gpt-4"  # Auto-configured based on provider
   # Maximum tokens for AI responses
   max_tokens: 2000
 

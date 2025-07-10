@@ -30,9 +30,11 @@ type GitConfig struct {
 }
 
 type AIConfig struct {
-	OpenAIAPIKey string `yaml:"openai_api_key"`
-	Model        string `yaml:"model"`
-	MaxTokens    int    `yaml:"max_tokens"`
+	OpenAIAPIKey    string `yaml:"openai_api_key"`
+	OpenRouterAPIKey string `yaml:"openrouter_api_key"`
+	BaseURL         string `yaml:"base_url"`          // For OpenRouter or custom endpoints
+	Model           string `yaml:"model"`
+	MaxTokens       int    `yaml:"max_tokens"`
 }
 
 type GitHubConfig struct {
@@ -78,6 +80,12 @@ func LoadConfig(path string) (*Config, error) {
 	if apiKey := os.Getenv("OPENAI_API_KEY"); apiKey != "" {
 		config.AI.OpenAIAPIKey = apiKey
 	}
+	if apiKey := os.Getenv("OPENROUTER_API_KEY"); apiKey != "" {
+		config.AI.OpenRouterAPIKey = apiKey
+	}
+	if baseURL := os.Getenv("AI_BASE_URL"); baseURL != "" {
+		config.AI.BaseURL = baseURL
+	}
 	if webhookURL := os.Getenv("SLACK_WEBHOOK_URL"); webhookURL != "" {
 		config.Slack.WebhookURL = webhookURL
 	}
@@ -89,11 +97,23 @@ func LoadConfig(path string) (*Config, error) {
 	if config.Interval == 0 {
 		config.Interval = 8 * time.Hour // Default to 3 times per day
 	}
+	
+	// Auto-detect provider based on API keys
+	usingOpenRouter := config.AI.OpenRouterAPIKey != ""
+	usingOpenAI := config.AI.OpenAIAPIKey != ""
+	
 	if config.AI.Model == "" {
-		config.AI.Model = "gpt-4"
+		if usingOpenRouter {
+			config.AI.Model = "anthropic/claude-3.5-sonnet"
+		} else {
+			config.AI.Model = "gpt-4"
+		}
 	}
 	if config.AI.MaxTokens == 0 {
 		config.AI.MaxTokens = 2000
+	}
+	if config.AI.BaseURL == "" && usingOpenRouter {
+		config.AI.BaseURL = "https://openrouter.ai/api/v1"
 	}
 	if config.GitHub.AutoMergeDelay == 0 {
 		config.GitHub.AutoMergeDelay = 24 * time.Hour

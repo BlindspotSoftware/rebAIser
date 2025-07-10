@@ -1,0 +1,69 @@
+name: 'AI Rebaser'
+description: 'Performs AI-assisted rebasing of internal repository tree on top of upstream open-source repository'
+author: 'Blindspot Software'
+branding:
+  icon: 'git-merge'
+  color: 'blue'
+
+inputs:
+  config_file:
+    description: 'Path to the configuration file'
+    required: false
+    default: 'config.yaml'
+  log_level:
+    description: 'Log level (debug, info, warn, error)'
+    required: false
+    default: 'info'
+  dry_run:
+    description: 'Run in dry-run mode without making actual changes'
+    required: false
+    default: 'false'
+  run_once:
+    description: 'Run once and exit (don\'t run periodically)'
+    required: false
+    default: 'true'
+  keep_artifacts:
+    description: 'Keep temporary working directory artifacts'
+    required: false
+    default: 'false'
+  openai_api_key:
+    description: 'OpenAI API key for conflict resolution'
+    required: false
+  openrouter_api_key:
+    description: 'OpenRouter API key for conflict resolution (auto-detects provider)'
+    required: false
+  ai_base_url:
+    description: 'Custom base URL for AI API (auto-configured for OpenRouter)'
+    required: false
+  github_token:
+    description: 'GitHub token for repository operations'
+    required: true
+  slack_webhook_url:
+    description: 'Slack webhook URL for notifications'
+    required: false
+
+outputs:
+  pull_request_number:
+    description: 'The number of the created pull request'
+  conflicts_resolved:
+    description: 'Number of conflicts resolved by AI'
+  tests_passed:
+    description: 'Whether all tests passed'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+    OPENROUTER_API_KEY: ${{ inputs.openrouter_api_key }}
+    AI_BASE_URL: ${{ inputs.ai_base_url }}
+    GITHUB_TOKEN: ${{ inputs.github_token }}
+    SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}
+  args:
+    - "-c"
+    - ${{ inputs.config_file }}
+    - "-l"
+    - ${{ inputs.log_level }}
+    - ${{ inputs.dry_run == 'true' && '-d' || '' }}
+    - ${{ inputs.run_once == 'true' && '-o' || '' }}
+    - ${{ inputs.keep_artifacts == 'true' && '-k' || '' }}
