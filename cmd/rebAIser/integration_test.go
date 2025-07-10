@@ -80,6 +80,26 @@ func TestIntegration_CLIFlags(t *testing.T) {
 // This demonstrates how you could create a mock-based integration test
 // that verifies the entire workflow without external dependencies
 func TestIntegration_MockedWorkflow(t *testing.T) {
+	// Store original environment variables
+	originalOpenAI := os.Getenv("OPENAI_API_KEY")
+	originalOpenRouter := os.Getenv("OPENROUTER_API_KEY")
+	defer func() {
+		if originalOpenAI != "" {
+			os.Setenv("OPENAI_API_KEY", originalOpenAI)
+		} else {
+			os.Unsetenv("OPENAI_API_KEY")
+		}
+		if originalOpenRouter != "" {
+			os.Setenv("OPENROUTER_API_KEY", originalOpenRouter)
+		} else {
+			os.Unsetenv("OPENROUTER_API_KEY")
+		}
+	}()
+	
+	// Clear environment variables to test config-only scenario
+	os.Unsetenv("OPENAI_API_KEY")
+	os.Unsetenv("OPENROUTER_API_KEY")
+	
 	// This test demonstrates how you could run the entire workflow
 	// using mocked services to verify the orchestration is correct
 	
@@ -89,6 +109,11 @@ func TestIntegration_MockedWorkflow(t *testing.T) {
 			InternalRepo: "https://github.com/test/internal.git",
 			UpstreamRepo: "https://github.com/test/upstream.git",
 			Branch:       "main",
+		},
+		AI: config.AIConfig{
+			OpenAIAPIKey: "test-key",
+			Model:        "gpt-4",
+			MaxTokens:    1000,
 		},
 		GitHub: config.GitHubConfig{
 			ReviewersTeam: "test-team",

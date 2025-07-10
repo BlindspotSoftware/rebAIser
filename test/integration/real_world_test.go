@@ -273,7 +273,7 @@ func testFullRebaseWorkflow(t *testing.T, upstreamDir, internalDir, workDir stri
 	
 	// Initialize services
 	gitService := git.NewService()
-	aiService := ai.NewService(cfg.AI.OpenAIAPIKey, cfg.AI.Model, cfg.AI.MaxTokens)
+	aiService := ai.NewService("openai", cfg.AI.OpenAIAPIKey, "", cfg.AI.Model, cfg.AI.MaxTokens)
 	
 	ctx := context.Background()
 	
@@ -373,7 +373,7 @@ func testInvalidAPIKey(t *testing.T, tempDir string) {
 	t.Helper()
 	
 	// Test with invalid API key
-	aiService := ai.NewService("invalid-key", "gpt-3.5-turbo", 1000)
+	aiService := ai.NewService("openai", "invalid-key", "", "gpt-3.5-turbo", 1000)
 	
 	conflict := interfaces.GitConflict{
 		File:    "test.go",
@@ -385,7 +385,7 @@ func testInvalidAPIKey(t *testing.T, tempDir string) {
 	ctx := context.Background()
 	_, err := aiService.ResolveConflict(ctx, conflict)
 	assert.Error(t, err, "Should fail with invalid API key")
-	assert.Contains(t, err.Error(), "OpenAI API call failed", "Should indicate API failure")
+	assert.Contains(t, err.Error(), "openai API call failed", "Should indicate API failure")
 }
 
 func testGitRebaseFailure(t *testing.T, tempDir string) {

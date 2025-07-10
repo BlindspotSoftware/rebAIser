@@ -13,7 +13,7 @@ import (
 )
 
 func TestNewService(t *testing.T) {
-	service := NewService("test-key", "gpt-4", 2000)
+	service := NewService("openai", "test-key", "", "gpt-4", 2000)
 	
 	assert.NotNil(t, service)
 	
@@ -112,7 +112,7 @@ func TestResolveConflict_Integration(t *testing.T) {
 		t.Skip("Skipping integration test - no OpenAI API key provided")
 	}
 	
-	service := NewService(apiKey, "gpt-3.5-turbo", 1000)
+	service := NewService("openai", apiKey, "", "gpt-3.5-turbo", 1000)
 	
 	conflict := interfaces.GitConflict{
 		File:    "example.go",
@@ -139,7 +139,7 @@ func TestGenerateCommitMessage_Integration(t *testing.T) {
 		t.Skip("Skipping integration test - no OpenAI API key provided")
 	}
 	
-	service := NewService(apiKey, "gpt-3.5-turbo", 100)
+	service := NewService("openai", apiKey, "", "gpt-3.5-turbo", 100)
 	
 	changes := []string{"main.go", "utils.go"}
 	
@@ -159,7 +159,7 @@ func TestGeneratePRDescription_Integration(t *testing.T) {
 		t.Skip("Skipping integration test - no OpenAI API key provided")
 	}
 	
-	service := NewService(apiKey, "gpt-3.5-turbo", 1000)
+	service := NewService("openai", apiKey, "", "gpt-3.5-turbo", 1000)
 	
 	commits := []string{"feat: add new feature", "fix: resolve bug"}
 	conflicts := []interfaces.GitConflict{
@@ -182,7 +182,7 @@ func TestResolveConflict_KconfigConflict_Integration(t *testing.T) {
 		t.Skip("Skipping integration test - no OpenAI API key provided")
 	}
 	
-	service := NewService(apiKey, "gpt-4", 2000)
+	service := NewService("openai", apiKey, "", "gpt-4", 2000)
 	
 	conflict := interfaces.GitConflict{
 		File: "src/Kconfig",
@@ -223,7 +223,7 @@ func TestResolveConflict_RegisterDefinition_Integration(t *testing.T) {
 		t.Skip("Skipping integration test - no OpenAI API key provided")
 	}
 	
-	service := NewService(apiKey, "gpt-4", 2000)
+	service := NewService("openai", apiKey, "", "gpt-4", 2000)
 	
 	conflict := interfaces.GitConflict{
 		File: "src/soc/intel/common/block/gpio/gpio.c",
@@ -264,7 +264,7 @@ func TestResolveConflict_DeviceTree_Integration(t *testing.T) {
 		t.Skip("Skipping integration test - no OpenAI API key provided")
 	}
 	
-	service := NewService(apiKey, "gpt-4", 2000)
+	service := NewService("openai", apiKey, "", "gpt-4", 2000)
 	
 	conflict := interfaces.GitConflict{
 		File: "src/mainboard/google/reef/devicetree.cb",
@@ -312,7 +312,7 @@ func TestGenerateCommitMessageWithConflicts_KconfigConflict_Integration(t *testi
 		t.Skip("Skipping integration test - no OpenAI API key provided")
 	}
 	
-	service := NewService(apiKey, "gpt-4", 150)
+	service := NewService("openai", apiKey, "", "gpt-4", 150)
 	
 	changes := []string{"src/Kconfig"}
 	conflicts := []interfaces.GitConflict{
@@ -348,7 +348,7 @@ func TestGenerateCommitMessageWithConflicts_GPIOConflict_Integration(t *testing.
 		t.Skip("Skipping integration test - no OpenAI API key provided")
 	}
 	
-	service := NewService(apiKey, "gpt-4", 150)
+	service := NewService("openai", apiKey, "", "gpt-4", 150)
 	
 	changes := []string{"src/soc/intel/common/block/gpio/gpio.c"}
 	conflicts := []interfaces.GitConflict{
@@ -384,7 +384,7 @@ func TestGenerateCommitMessageWithConflicts_DeviceTreeConflict_Integration(t *te
 		t.Skip("Skipping integration test - no OpenAI API key provided")
 	}
 	
-	service := NewService(apiKey, "gpt-4", 150)
+	service := NewService("openai", apiKey, "", "gpt-4", 150)
 	
 	changes := []string{"src/mainboard/google/reef/devicetree.cb"}
 	conflicts := []interfaces.GitConflict{

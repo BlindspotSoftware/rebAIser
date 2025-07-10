@@ -10,6 +10,19 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
+	// Store original environment variable
+	originalAPIKey := os.Getenv("OPENAI_API_KEY")
+	defer func() {
+		if originalAPIKey != "" {
+			os.Setenv("OPENAI_API_KEY", originalAPIKey)
+		} else {
+			os.Unsetenv("OPENAI_API_KEY")
+		}
+	}()
+	
+	// Clear the environment variable for testing
+	os.Unsetenv("OPENAI_API_KEY")
+
 	// Create temporary config file
 	configContent := `
 interval: 4h

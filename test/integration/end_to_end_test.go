@@ -390,10 +390,10 @@ func testCompleteWorkflow(t *testing.T, scenario *TestScenario, apiKey string) {
 	
 	// Initialize all services
 	gitService := git.NewService()
-	aiService := ai.NewService(apiKey, "gpt-3.5-turbo", 1000)
+	aiService := ai.NewService("openai", apiKey, "", "gpt-3.5-turbo", 1000)
 	githubService := github.NewService("test-token", "test-org", "test-repo")
 	notifyService := notify.NewService("https://hooks.slack.com/test", "#test", "Test Bot")
-	testService := test.NewService()
+	testService := test.NewService([]interfaces.TestCommand{})
 	
 	ctx := context.Background()
 	
@@ -552,7 +552,7 @@ func testNetworkFailure(t *testing.T, tempDir string) {
 
 func testAIServiceFailure(t *testing.T, tempDir string) {
 	// Test with invalid API key
-	aiService := ai.NewService("invalid-key", "gpt-3.5-turbo", 1000)
+	aiService := ai.NewService("openai", "invalid-key", "", "gpt-3.5-turbo", 1000)
 	ctx := context.Background()
 	
 	conflict := interfaces.GitConflict{
@@ -567,7 +567,7 @@ func testAIServiceFailure(t *testing.T, tempDir string) {
 }
 
 func testTestExecutionFailure(t *testing.T, tempDir string) {
-	testService := test.NewService()
+	testService := test.NewService([]interfaces.TestCommand{})
 	ctx := context.Background()
 	
 	// Test with invalid command

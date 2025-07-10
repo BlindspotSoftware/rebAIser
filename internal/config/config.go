@@ -100,7 +100,7 @@ func LoadConfig(path string) (*Config, error) {
 	
 	// Auto-detect provider based on API keys
 	usingOpenRouter := config.AI.OpenRouterAPIKey != ""
-	usingOpenAI := config.AI.OpenAIAPIKey != ""
+	_ = config.AI.OpenAIAPIKey != ""
 	
 	if config.AI.Model == "" {
 		if usingOpenRouter {

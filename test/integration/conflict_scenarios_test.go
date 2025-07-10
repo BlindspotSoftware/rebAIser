@@ -77,7 +77,7 @@ func testConflictScenario(t *testing.T, setupFunc func(t *testing.T, upstream, i
 	
 	// Initialize services
 	gitService := git.NewService()
-	aiService := ai.NewService(apiKey, "gpt-3.5-turbo", 1000)
+	aiService := ai.NewService("openai", apiKey, "", "gpt-3.5-turbo", 1000)
 	
 	ctx := context.Background()
 	
